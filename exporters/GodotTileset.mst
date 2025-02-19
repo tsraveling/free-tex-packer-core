@@ -1,7 +1,7 @@
 {
 	"textures": [
 		{
-			"image": "{{config.imageFile}}",
+			"image": "{{config.imageName}}",
 			"size": {
 				"w": {{config.imageWidth}},
 				"h": {{config.imageHeight}}

@@ -19,7 +19,7 @@ function loadImage(file, files) {
   return Jimp.read(file.path)
     .then(image => {
       if (!image) return;
-      image.name = fixPath(file.path);
+      image.name = fixPath(file.relative);
 
       // This is used for detecting identical frames
       image._base64 = file.contents.toString("base64");
