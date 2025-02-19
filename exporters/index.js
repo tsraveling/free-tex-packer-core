@@ -144,6 +144,7 @@ function prepareData(data, options) {
 
 function startExporter(exporter, data, options) {
   let { rects, config } = prepareData(data, options);
+  console.log(">>> rects:", rects)
   let renderOptions = {
     rects: rects,
     config: config,
