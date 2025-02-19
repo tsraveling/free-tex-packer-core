@@ -6,242 +6,242 @@ let TextureRenderer = require('./utils/TextureRenderer');
 
 class PackProcessor {
 
-    static detectIdentical(rects) {
+  static detectIdentical(rects) {
 
-        let identical = [];
+    let identical = [];
 
-        for (let i = 0; i < rects.length; i++) {
-            let rect1 = rects[i];
-            for (let n = i + 1; n < rects.length; n++) {
-                let rect2 = rects[n];
-                if (rect1.image._base64 == rect2.image._base64 && identical.indexOf(rect2) < 0) {
-                    rect2.identical = rect1;
-                    identical.push(rect2);
-                }
-            }
+    for (let i = 0; i < rects.length; i++) {
+      let rect1 = rects[i];
+      for (let n = i + 1; n < rects.length; n++) {
+        let rect2 = rects[n];
+        if (rect1.image._base64 == rect2.image._base64 && identical.indexOf(rect2) < 0) {
+          rect2.identical = rect1;
+          identical.push(rect2);
         }
-
-        for (let rect of identical) {
-            rects.splice(rects.indexOf(rect), 1);
-        }
-
-        return {
-            rects: rects,
-            identical: identical
-        }
+      }
     }
 
-    static applyIdentical(rects, identical) {
-        let clones = [];
-        let removeIdentical = [];
-
-        for (let item of identical) {
-            let ix = rects.indexOf(item.identical);
-            if (ix >= 0) {
-                let rect = rects[ix];
-
-                let clone = Object.assign({}, rect);
-
-                clone.name = item.name;
-                clone.image = item.image;
-                clone.skipRender = true;
-
-                removeIdentical.push(item);
-                clones.push(clone);
-            }
-        }
-
-        for (let item of removeIdentical) {
-            identical.splice(identical.indexOf(item), 1);
-        }
-
-        for (let item of clones) {
-            item.cloned = true;
-            rects.push(item);
-        }
-
-        return rects;
+    for (let rect of identical) {
+      rects.splice(rects.indexOf(rect), 1);
     }
 
-    static pack(images = {}, options = {}, onComplete = null, onError = null) {
+    return {
+      rects: rects,
+      identical: identical
+    }
+  }
 
-        let rects = [];
+  static applyIdentical(rects, identical) {
+    let clones = [];
+    let removeIdentical = [];
 
-        let padding = options.padding || 0;
-        let extrude = options.extrude || 0;
+    for (let item of identical) {
+      let ix = rects.indexOf(item.identical);
+      if (ix >= 0) {
+        let rect = rects[ix];
 
-        let maxWidth = 0, maxHeight = 0;
-        let minWidth = 0, minHeight = 0;
+        let clone = Object.assign({}, rect);
 
-        let alphaThreshold = options.alphaThreshold || 0;
-        if (alphaThreshold > 255) alphaThreshold = 255;
+        clone.name = item.name;
+        clone.image = item.image;
+        clone.skipRender = true;
 
-        let names = Object.keys(images).sort();
+        removeIdentical.push(item);
+        clones.push(clone);
+      }
+    }
 
-        for (let key of names) {
-            let img = images[key];
+    for (let item of removeIdentical) {
+      identical.splice(identical.indexOf(item), 1);
+    }
 
-            maxWidth += img.width;
-            maxHeight += img.height;
+    for (let item of clones) {
+      item.cloned = true;
+      rects.push(item);
+    }
 
-            if (img.width > minWidth) minWidth = img.width + padding * 2 + extrude * 2;
-            if (img.height > minHeight) minHeight = img.height + padding * 2 + extrude * 2;
+    return rects;
+  }
 
-            rects.push({
-                frame: { x: 0, y: 0, w: img.width, h: img.height },
-                rotated: false,
-                trimmed: false,
-                spriteSourceSize: { x: 0, y: 0, w: img.width, h: img.height },
-                sourceSize: { w: img.width, h: img.height },
-                name: key,
-                image: img
-            });
+  static pack(images = {}, options = {}, onComplete = null, onError = null) {
+
+    let rects = [];
+
+    let padding = options.padding || 0;
+    let extrude = options.extrude || 0;
+
+    let maxWidth = 0, maxHeight = 0;
+    let minWidth = 0, minHeight = 0;
+
+    let alphaThreshold = options.alphaThreshold || 0;
+    if (alphaThreshold > 255) alphaThreshold = 255;
+
+    let names = Object.keys(images).sort();
+
+    for (let key of names) {
+      let img = images[key];
+
+      maxWidth += img.width;
+      maxHeight += img.height;
+
+      if (img.width > minWidth) minWidth = img.width + padding * 2 + extrude * 2;
+      if (img.height > minHeight) minHeight = img.height + padding * 2 + extrude * 2;
+
+      rects.push({
+        frame: { x: 0, y: 0, w: img.width, h: img.height },
+        rotated: false,
+        trimmed: false,
+        spriteSourceSize: { x: 0, y: 0, w: img.width, h: img.height },
+        sourceSize: { w: img.width, h: img.height },
+        name: key,
+        image: img
+      });
+    }
+
+    let width = options.width || 0;
+    let height = options.height || 0;
+
+    if (!width) width = maxWidth;
+    if (!height) height = maxHeight;
+
+    if (options.powerOfTwo) {
+      let sw = Math.round(Math.log(width) / Math.log(2));
+      let sh = Math.round(Math.log(height) / Math.log(2));
+
+      let pw = Math.pow(2, sw);
+      let ph = Math.pow(2, sh);
+
+      if (pw < width) pw = Math.pow(2, sw + 1);
+      if (ph < height) ph = Math.pow(2, sh + 1);
+
+      width = pw;
+      height = ph;
+    }
+
+    if (width < minWidth || height < minHeight) {
+      if (onError) onError({
+        description: "Invalid size. Min: " + minWidth + "x" + minHeight
+      });
+      return;
+    }
+
+    if (options.allowTrim) {
+      Trimmer.trim(rects, alphaThreshold);
+    }
+
+    for (let item of rects) {
+      item.frame.w += padding * 2 + extrude * 2;
+      item.frame.h += padding * 2 + extrude * 2;
+    }
+    let identical = [];
+
+    if (options.detectIdentical) {
+      let res = PackProcessor.detectIdentical(rects);
+
+      rects = res.rects;
+      identical = res.identical;
+    }
+
+    let getAllPackers = () => {
+      let methods = [];
+      for (let packerClass of allPackers) {
+        if (packerClass !== OptimalPacker) {
+          for (let method in packerClass.methods) {
+            methods.push({ packerClass, packerMethod: packerClass.methods[method], allowRotation: false });
+            if (options.allowRotation) {
+              methods.push({ packerClass, packerMethod: packerClass.methods[method], allowRotation: true });
+            }
+          }
         }
+      }
+      return methods;
+    };
 
-        let width = options.width || 0;
-        let height = options.height || 0;
+    let packerClass = options.packer || MaxRectsBinPack;
+    let packerMethod = options.packerMethod || MaxRectsBinPack.methods.BestShortSideFit;
+    let packerCombos = (packerClass === OptimalPacker) ? getAllPackers() : [{ packerClass, packerMethod, allowRotation: options.allowRotation }];
 
-        if (!width) width = maxWidth;
-        if (!height) height = maxHeight;
+    let optimalRes;
+    let optimalSheets = Infinity;
+    let optimalEfficiency = 0;
 
-        if (options.powerOfTwo) {
-            let sw = Math.round(Math.log(width) / Math.log(2));
-            let sh = Math.round(Math.log(height) / Math.log(2));
+    let sourceArea = 0;
+    for (let rect of rects) {
+      sourceArea += rect.sourceSize.w * rect.sourceSize.h;
+    }
 
-            let pw = Math.pow(2, sw);
-            let ph = Math.pow(2, sh);
+    for (let combo of packerCombos) {
+      let res = [];
+      let sheetArea = 0;
 
-            if (pw < width) pw = Math.pow(2, sw + 1);
-            if (ph < height) ph = Math.pow(2, sh + 1);
+      // duplicate rects if more than 1 combo since the array is mutated in pack()
+      let _rects = packerCombos.length > 1 ? rects.map(rect => {
+        return Object.assign({}, rect, {
+          frame: Object.assign({}, rect.frame),
+          spriteSourceSize: Object.assign({}, rect.spriteSourceSize),
+          sourceSize: Object.assign({}, rect.sourceSize)
+        });
+      }) : rects;
 
-            width = pw;
-            height = ph;
+      // duplicate identical if more than 1 combo and fix references to point to the
+      //  cloned rects since the array is mutated in applyIdentical()
+      let _identical = packerCombos.length > 1 ? identical.map(rect => {
+        for (let rect2 of _rects) {
+          if (rect.identical.image._base64 == rect2.image._base64) {
+            return Object.assign({}, rect, { identical: rect2 });
+          }
         }
+      }) : identical;
 
-        if (width < minWidth || height < minHeight) {
-            if (onError) onError({
-                description: "Invalid size. Min: " + minWidth + "x" + minHeight
-            });
-            return;
+      while (_rects.length) {
+        let packer = new combo.packerClass(width, height, combo.allowRotation);
+        let result = packer.pack(_rects, combo.packerMethod);
+
+        for (let item of result) {
+          item.frame.x += padding + extrude;
+          item.frame.y += padding + extrude;
+          item.frame.w -= padding * 2 + extrude * 2;
+          item.frame.h -= padding * 2 + extrude * 2;
         }
-
-        if (options.allowTrim) {
-            Trimmer.trim(rects, alphaThreshold);
-        }
-
-        for (let item of rects) {
-            item.frame.w += padding * 2 + extrude * 2;
-            item.frame.h += padding * 2 + extrude * 2;
-        }
-
-        let identical = [];
 
         if (options.detectIdentical) {
-            let res = PackProcessor.detectIdentical(rects);
-
-            rects = res.rects;
-            identical = res.identical;
+          result = PackProcessor.applyIdentical(result, _identical);
         }
 
-        let getAllPackers = () => {
-            let methods = [];
-            for (let packerClass of allPackers) {
-                if (packerClass !== OptimalPacker) {
-                    for (let method in packerClass.methods) {
-                        methods.push({ packerClass, packerMethod: packerClass.methods[method], allowRotation: false });
-                        if (options.allowRotation) {
-                            methods.push({ packerClass, packerMethod: packerClass.methods[method], allowRotation: true });
-                        }
-                    }
-                }
-            }
-            return methods;
-        };
+        res.push(result);
 
-        let packerClass = options.packer || MaxRectsBinPack;
-        let packerMethod = options.packerMethod || MaxRectsBinPack.methods.BestShortSideFit;
-        let packerCombos = (packerClass === OptimalPacker) ? getAllPackers() : [{ packerClass, packerMethod, allowRotation: options.allowRotation }];
-
-        let optimalRes;
-        let optimalSheets = Infinity;
-        let optimalEfficiency = 0;
-
-        let sourceArea = 0;
-        for (let rect of rects) {
-            sourceArea += rect.sourceSize.w * rect.sourceSize.h;
+        for (let item of result) {
+          this.removeRect(_rects, item.name);
         }
 
-        for (let combo of packerCombos) {
-            let res = [];
-            let sheetArea = 0;
+        let { width: sheetWidth, height: sheetHeight } = TextureRenderer.getSize(result, options);
+        sheetArea += sheetWidth * sheetHeight;
+      }
 
-            // duplicate rects if more than 1 combo since the array is mutated in pack()
-            let _rects = packerCombos.length > 1 ? rects.map(rect => {
-                return Object.assign({}, rect, {
-                    frame: Object.assign({}, rect.frame),
-                    spriteSourceSize: Object.assign({}, rect.spriteSourceSize),
-                    sourceSize: Object.assign({}, rect.sourceSize)
-                });
-            }) : rects;
+      let sheets = res.length;
+      console.log(sheets, " sheets were generated.");
+      let efficiency = sourceArea / sheetArea;
 
-            // duplicate identical if more than 1 combo and fix references to point to the
-            //  cloned rects since the array is mutated in applyIdentical()
-            let _identical = packerCombos.length > 1 ? identical.map(rect => {
-                for (let rect2 of _rects) {
-                    if (rect.identical.image._base64 == rect2.image._base64) {
-                        return Object.assign({}, rect, { identical: rect2 });
-                    }
-                }
-            }) : identical;
-
-            while (_rects.length) {
-                let packer = new combo.packerClass(width, height, combo.allowRotation);
-                let result = packer.pack(_rects, combo.packerMethod);
-
-                for (let item of result) {
-                    item.frame.x += padding + extrude;
-                    item.frame.y += padding + extrude;
-                    item.frame.w -= padding * 2 + extrude * 2;
-                    item.frame.h -= padding * 2 + extrude * 2;
-                }
-
-                if (options.detectIdentical) {
-                    result = PackProcessor.applyIdentical(result, _identical);
-                }
-
-                res.push(result);
-
-                for (let item of result) {
-                    this.removeRect(_rects, item.name);
-                }
-
-                let { width: sheetWidth, height: sheetHeight } = TextureRenderer.getSize(result, options);
-                sheetArea += sheetWidth * sheetHeight;
-            }
-
-            let sheets = res.length;
-            let efficiency = sourceArea / sheetArea;
-
-            if (sheets < optimalSheets || (sheets === optimalSheets && efficiency > optimalEfficiency)) {
-                optimalRes = res;
-                optimalSheets = sheets;
-                optimalEfficiency = efficiency;
-            }
-        }
-
-        if (onComplete) {
-            onComplete(optimalRes);
-        }
+      if (sheets < optimalSheets || (sheets === optimalSheets && efficiency > optimalEfficiency)) {
+        optimalRes = res;
+        optimalSheets = sheets;
+        optimalEfficiency = efficiency;
+      }
     }
 
-    static removeRect(rects, name) {
-        for (let i = 0; i < rects.length; i++) {
-            if (rects[i].name == name) {
-                rects.splice(i, 1);
-                return;
-            }
-        }
+    if (onComplete) {
+      onComplete(optimalRes);
     }
+  }
+
+  static removeRect(rects, name) {
+    for (let i = 0; i < rects.length; i++) {
+      if (rects[i].name == name) {
+        rects.splice(i, 1);
+        return;
+      }
+    }
+  }
 }
 
 module.exports = PackProcessor;
