@@ -19,8 +19,8 @@
 					"margin": {
 						"x": {{spriteSourceSize.x}},
 						"y": {{spriteSourceSize.y}},
-						"w": {{spriteSourceSize.w}},
-						"h": {{spriteSourceSize.h}}
+						"w": {{spriteSourceSize.mw}},
+						"h": {{spriteSourceSize.mh}}
 					}
 				}{{^last}},{{/last}}
 				{{/rects}}
