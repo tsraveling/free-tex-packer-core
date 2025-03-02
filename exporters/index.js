@@ -96,8 +96,8 @@ function prepareData(data, options) {
       y: item.spriteSourceSize.y,
       w: item.spriteSourceSize.w,
       h: item.spriteSourceSize.h,
-      mw: item.spriteSourceSize.mw,
-      mh: item.spriteSourceSize.mh,
+      mw: item.spriteSourceSize.mw ?? 0,
+      mh: item.spriteSourceSize.mh ?? 0,
     };
     let sourceSize = { w: item.sourceSize.w, h: item.sourceSize.h };
 
