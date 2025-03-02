@@ -100,6 +100,8 @@ class Trimmer {
         item.spriteSourceSize.y = 0;
         item.spriteSourceSize.w = 1;
         item.spriteSourceSize.h = 1;
+        item.spriteSourceSize.mw = 0;
+        item.spriteSourceSize.mh = 0;
       }
 
       if (item.trimmed) {
